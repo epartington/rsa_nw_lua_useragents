@@ -1,5 +1,5 @@
 local parserName = "lua_useragents"
-local parserVersion = "2018.03.26.3"
+local parserVersion = "2018.04.09.4"
 
 local suspiciousUseragents = nw.createParser(parserName, "suspicious useragent detection")
 
@@ -12,6 +12,7 @@ nw.logDebug(parserName .. " " .. parserVersion)
     VERSION
         1.0  eric.partington@rsa.com  - Initial development (with help from B. Motley)
 		3.0 - Fixes for anchor start and end wildcards
+		4.0 - removed nwloginfo and changed >> to -- delimeter on substring matches
     DEPENDENCIES
         something to create meta in Client metakey
 		logs will need a utility parser to move user.agent to client to normalize with packets
@@ -327,7 +328,7 @@ function suspiciousUseragents:onAgent(idx, vlu)
 				--print("comment : " .. keywordsSubFull[keywordsSub[idx]])
 				--print("keyword substring found : " .. keyword)
 				--foundPattern = "pattern found: " .. keyword .. " - " .. keywordsSubFull[keywordsSub[idx]]
-				verdict = "ua_substring_" .. keywordsSubFull[keywordsSub[idx]] .. " >> " .. keyword
+				verdict = "ua_substring_" .. keywordsSubFull[keywordsSub[idx]] .. "--" .. keyword
 				
 				--nw.logInfo(parserName .. " substring " .. vlu .. ": " .. verdict)
 				
@@ -340,12 +341,12 @@ function suspiciousUseragents:onAgent(idx, vlu)
 	
 	-- debug
 	if verdict ~= nil then 
-		nw.logInfo(parserName .. " " .. vlu .. ": " .. verdict)
+		--nw.logInfo(parserName .. " " .. vlu .. ": " .. verdict)
 		-- write out the score for that domain
 		nw.createMeta(self.keys["ioc"], "suspicious_useragent")
 		nw.createMeta(self.keys["analysis.session"], verdict)
 		
-		nw.logInfo(parserName .. "*****************")
+		--nw.logInfo(parserName .. "*****************")
 	end
 end
 
