@@ -1,5 +1,5 @@
 local parserName = "lua_useragents"
-local parserVersion = "2018.04.09.4"
+local parserVersion = "2018.07.11.6"
 
 local suspiciousUseragents = nw.createParser(parserName, "suspicious useragent detection")
 
@@ -13,6 +13,8 @@ nw.logDebug(parserName .. " " .. parserVersion)
         1.0  eric.partington@rsa.com  - Initial development (with help from B. Motley)
 		3.0 - Fixes for anchor start and end wildcards
 		4.0 - removed nwloginfo and changed >> to -- delimeter on substring matches
+		5.0 - insert punctuation function to create /w /s from the user agents
+		6.0 - writes the punctuation of the user agent to a new key
     DEPENDENCIES
         something to create meta in Client metakey
 		logs will need a utility parser to move user.agent to client to normalize with packets
@@ -20,6 +22,7 @@ nw.logDebug(parserName .. " " .. parserVersion)
         client - reads
 		analysis.session - writes
 		ioc - writes
+		punctuation - writes
     OPTIONS
         fixme
     TODO
@@ -277,9 +280,33 @@ suspiciousUseragents:setKeys({
     --nwlanguagekey.create("domain.dst"),
 	--nwlanguagekey.create("direction"),
 	nwlanguagekey.create("ioc", nwtypes.Text),
-	nwlanguagekey.create("analysis.session", nwtypes.Text)
+	nwlanguagekey.create("analysis.session", nwtypes.Text),
+	nwlanguagekey.create("punctuation",nwtypes.Text)
 	
 })
+
+-- get the punctuation from the input (\w \s)
+-- replace all word characters with ''
+-- replace all spaces with ''
+-- modelled after splunk punctuation
+function getPunct(idx, vlu)
+	local punctuation = nil
+	
+	nw.logInfo(parserName .. ": getPunct: " .. vlu)
+	
+	if vlu then
+	
+		punctuation = vlu
+	
+		punctuation = string.gsub(punctuation, "%w", "")
+		--nw.logInfo(parserName .. ": remove word char: " .. punctuation)
+		punctuation = string.gsub(punctuation, "%s", "")
+		--nw.logInfo(parserName .. ": remove spaces: " .. punctuation)
+	end
+	
+	return punctuation
+end
+
 
 function suspiciousUseragents:onAgent(idx, vlu)
     local tags = {}
@@ -339,7 +366,7 @@ function suspiciousUseragents:onAgent(idx, vlu)
 		end
 	end
 	
-	-- debug
+	-- write out what we find
 	if verdict ~= nil then 
 		--nw.logInfo(parserName .. " " .. vlu .. ": " .. verdict)
 		-- write out the score for that domain
@@ -348,6 +375,18 @@ function suspiciousUseragents:onAgent(idx, vlu)
 		
 		--nw.logInfo(parserName .. "*****************")
 	end
+	
+	-- added to capture the punctuation of UA strings and write to  custom metakey punctuation
+	-- provide the UA and get back the punctuation
+	local isPunct = nil
+	-- see if we have a response
+	isPunct = getPunct(idx,vlu)
+	--if response is not nil then we have something
+	if isPunct then	
+		-- write it to new custom key
+		nw.createMeta(self.keys["punctuation"], isPunct)
+	end
+	
 end
 
 suspiciousUseragents:setCallbacks({
